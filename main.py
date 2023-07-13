@@ -9,17 +9,8 @@ import tensorflow as tf
 # Import our model
 from build_model import build_cnn_model
 
-# Define the model
-new_model = build_cnn_model()
-# Initialize the model by passing some data through
-new_model.build(input_shape=(64,64,3,1))
-# Print the summary of the layers in the model.
-print(new_model.summary())
-
-new_model.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True), optimizer = 'adam', metrics = ['accuracy'])
-
-# Loads the weights
-new_model.load_weights("eyedetection.h5")
+# Load the model
+new_model = tf.keras.models.load_model('ES_v1.h5')
 
 # Start capture of the video
 vidcap = cv.VideoCapture('run1.avi')
@@ -71,33 +62,35 @@ while success:
     # Canny Edge Detection
     #eye_image = cv.Canny(eye_image,10,200)
 
-    # Hough Transform
-    detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,100,param1=50,param2=20,minRadius=20,maxRadius=40)
+    if eye_open:
 
-    # Draw circles that are detected.
-    if detected_circles is not None:
-  
-      # Convert the circle parameters a, b and r to integers.
-      detected_circles = np.uint16(np.around(detected_circles))
+        # Hough Transform
+        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,100,param1=50,param2=20,minRadius=20,maxRadius=40)
+
+        # Draw circles that are detected.
+        if detected_circles is not None:
     
-      for pt in detected_circles[0, :]:
-          
-          a, b, r = pt[0], pt[1], pt[2]
+            # Convert the circle parameters a, b and r to integers.
+            detected_circles = np.uint16(np.around(detected_circles))
+            
+            for pt in detected_circles[0, :]:
+                
+                a, b, r = pt[0], pt[1], pt[2]
 
-          # Append new diameter & frame #
-          diameter.append(r)
-          frames.append(count)
+                # Append new diameter & frame #
+                diameter.append(r)
+                frames.append(count)
 
-          # Draw the circumference of the circle.
-          cv.circle(eye_image_color, (a, b), r, (0, 255, 0), 2)
-    
-          # Draw a small circle (of radius 1) to show the center.
-          cv.circle(eye_image_color, (a, b), 1, (0, 0, 255), 3)
+                # Draw the circumference of the circle.
+                cv.circle(eye_image_color, (a, b), r, (0, 255, 0), 2)
+            
+                # Draw a small circle (of radius 1) to show the center.
+                cv.circle(eye_image_color, (a, b), 1, (0, 0, 255), 3)
     
     #else:
 
-      #print('No circles detected')
-      #cv.imshow('Frame', eye_image)
+        #diameter.append(0)
+        #frames.append(count)
 
     # Display the resulting frame
     cv.imshow("Detected Circle", eye_image_color)

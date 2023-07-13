@@ -35,7 +35,7 @@ def build_cnn_model(classes=2):
 model = build_cnn_model()
 
 # Initialize the model by passing some data through
-model.build(input_shape=(64,64,3))
+model.build(input_shape=(None,64,64,3))
 
 # Print the summary of the layers in the model.
 print(model.summary())
@@ -45,10 +45,6 @@ model.compile(loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=T
 
 # Loads the weights
 model.load_weights("eyedetection.h5")
-
-# Evaluate the model
-#test_loss, test_acc = model.evaluate(test_set)
-#print('Test accuracy:', test_acc)
 
 # Save the model
 model.save('ES_v1.h5')
