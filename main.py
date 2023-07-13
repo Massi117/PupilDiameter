@@ -1,10 +1,11 @@
 # This script extracts the frame of the video and calculates the size of the pupil
 
 # Imports
-from matplotlib import pyplot as plt
 import cv2 as cv
 import numpy as np
+import pickle
 import tensorflow as tf
+from matplotlib import pyplot as plt
 
 # Import our model
 from build_model import build_cnn_model
@@ -42,7 +43,7 @@ while success:
     frame_tensor = tf.expand_dims(frame_tensor, axis=0)
 
     # Predict each frame
-    prediction = new_model.predict(frame_tensor)
+    prediction = new_model.predict(frame_tensor,verbose=0)
     if prediction[0][0] >= prediction[0][1]:
         print('Single Image Prediction: Closed Eyes')
         eye_open = False
@@ -65,7 +66,7 @@ while success:
     if eye_open:
 
         # Hough Transform
-        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,100,param1=50,param2=20,minRadius=20,maxRadius=40)
+        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,100,param1=50,param2=24,minRadius=18,maxRadius=38)
 
         # Draw circles that are detected.
         if detected_circles is not None:
@@ -101,9 +102,9 @@ while success:
     #print('Read a new frame: ', success)
     count += 1
 
-# Plot the relative diameter of the pupil vs frame
-plt.clf()
-plt.plot(frames, diameter)
-plt.ylim(0, 40)
-plt.show()
+# Save the data
+with open("eye_frames", "wb") as fd:
+    pickle.dump(frames, fd)
 
+with open("eye_diameter", "wb") as dd:
+    pickle.dump(diameter, dd)
