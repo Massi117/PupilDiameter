@@ -7,14 +7,11 @@ import pickle
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
-# Import our model
-from build_model import build_cnn_model
-
 # Load the model
-new_model = tf.keras.models.load_model('ES_v1.h5')
+new_model = tf.keras.models.load_model('CNN_model/ES_v1.h5')
 
 # Start capture of the video
-vidcap = cv.VideoCapture('run1.avi')
+vidcap = cv.VideoCapture('video/run1.avi')
 success,image = vidcap.read()
 count = 0
 plt.imshow(image)
@@ -32,7 +29,7 @@ while success:
 
     # Parse out eye image & convert to grayscale
     eye_image_color = image[130:350, 350:550]	
-    eye_image = eye_image_color[:,:,2]
+    eye_image = eye_image_color[:,:,0]
     #eye_image = cv.cvtColor(eye_image_color, cv.COLOR_BGR2GRAY)
 
     # Preprocess each frame
@@ -45,20 +42,24 @@ while success:
     # Predict each frame
     prediction = new_model.predict(frame_tensor,verbose=0)
     if prediction[0][0] >= prediction[0][1]:
-        print('Single Image Prediction: Closed Eyes')
+        #print('Single Image Prediction: Closed Eyes')
         eye_open = False
     else:
-        print('Single Image Prediction: Open Eyes')
+        #print('Single Image Prediction: Open Eyes')
         eye_open = True
 
+    # Binarize the image
+    thresh = 175
+    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_TOZERO)
+
     # Apply a median filter (normalization)
-    l = 15
+    l = 20
     kernel = np.ones((l,l),np.float32)/(l**2)
     eye_image = cv.filter2D(eye_image,-1,kernel)
 
     # Binarize the image
-    #thresh = 100
-    #ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY_INV)
+    thresh = 50
+    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
 
     # Canny Edge Detection
     #eye_image = cv.Canny(eye_image,10,200)
@@ -66,7 +67,7 @@ while success:
     if eye_open:
 
         # Hough Transform
-        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,100,param1=50,param2=24,minRadius=18,maxRadius=38)
+        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,1000,param1=450,param2=1,minRadius=5,maxRadius=30)
 
         # Draw circles that are detected.
         if detected_circles is not None:
@@ -79,7 +80,7 @@ while success:
                 a, b, r = pt[0], pt[1], pt[2]
 
                 # Append new diameter & frame #
-                diameter.append(r)
+                diameter.append(r*2)
                 frames.append(count)
 
                 # Draw the circumference of the circle.
@@ -87,15 +88,16 @@ while success:
             
                 # Draw a small circle (of radius 1) to show the center.
                 cv.circle(eye_image_color, (a, b), 1, (0, 0, 255), 3)
-    
-    #else:
 
-        #diameter.append(0)
-        #frames.append(count)
+    else:
+
+        diameter.append(0)
+        frames.append(count)
 
     # Display the resulting frame
     cv.imshow("Detected Circle", eye_image_color)
     cv.waitKey(25)
+    print(count/30/60)
 
     # Get the next frame
     success,image = vidcap.read()
@@ -103,8 +105,8 @@ while success:
     count += 1
 
 # Save the data
-with open("eye_frames", "wb") as fd:
+with open("data/eye_frames", "wb") as fd:
     pickle.dump(frames, fd)
 
-with open("eye_diameter", "wb") as dd:
+with open("data/eye_diameter", "wb") as dd:
     pickle.dump(diameter, dd)
