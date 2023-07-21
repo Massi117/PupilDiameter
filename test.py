@@ -52,34 +52,16 @@ while success:
         eye_open = True
 
     # Binarize the image
-    thresh = 200
+    thresh = 175
     ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_TOZERO)
 
     # Apply a median filter (normalization)
-    l = 5
-    kernel = np.ones((l,l),np.float32)/(l**2)
-    eye_image = cv.filter2D(eye_image,-1,kernel)
-
-    # Binarize the image
-    thresh = 115
-    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
-
-    # Apply a median filter (normalization)
-    l = 10
+    l = 20
     kernel = np.ones((l,l),np.float32)/(l**2)
     eye_image = cv.filter2D(eye_image,-1,kernel)
 
     # Binarize the image
     thresh = 50
-    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
-
-    # Apply a median filter (normalization)
-    l = 10
-    kernel = np.ones((l,l),np.float32)/(l**2)
-    eye_image = cv.filter2D(eye_image,-1,kernel)
-
-    # Binarize the image
-    thresh = 70
     ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
 
     # Canny Edge Detection

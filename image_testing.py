@@ -7,7 +7,7 @@ import pickle
 from matplotlib import pyplot as plt
 
 # Start capture of the video
-vidcap = cv.VideoCapture('video/run1.avi')
+vidcap = cv.VideoCapture('video/run2.avi')
 success,image = vidcap.read()
 count = 0
 plt.imshow(image)
@@ -20,8 +20,8 @@ while success:
     # Do later
 
     # Parse out eye image & convert to grayscale
-    #eye_image_color = image[40:100, 20:80]
-    eye_image_color = image[130:350, 350:550]	# normal
+    eye_image_color = image[40:100, 20:80]
+    #eye_image_color = image[130:350, 350:550]	# normal
     eye_image = eye_image_color[:,:,0]
     #eye_image = cv.cvtColor(eye_image_color, cv.COLOR_BGR2GRAY)
 
