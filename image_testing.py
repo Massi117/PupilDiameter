@@ -87,7 +87,7 @@ while success:
     cv.waitKey(25)
 
     # Save frame as JPEG file
-    cv.imwrite("frame%d.jpg" % count, eye_image)
+    #cv.imwrite("frame%d.jpg" % count, eye_image)
 
     # Get the next frame
     success,image = vidcap.read()

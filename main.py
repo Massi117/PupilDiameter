@@ -4,14 +4,19 @@
 import cv2 as cv
 import numpy as np
 import pickle
+import sys
 import tensorflow as tf
 from matplotlib import pyplot as plt
+
+# Collect Directory of video
+for arg in sys.argv:
+    directory = arg
 
 # Load the model
 new_model = tf.keras.models.load_model('CNN_model/ES_v1.h5')
 
 # Start capture of the video
-vidcap = cv.VideoCapture('video/run1.avi')
+vidcap = cv.VideoCapture(directory)
 success,image = vidcap.read()
 count = 0
 plt.imshow(image)
@@ -28,7 +33,7 @@ while success:
     # Do later
 
     # Parse out eye image & convert to grayscale
-    eye_image_color = image[130:350, 350:550]	
+    eye_image_color = image[130:350, 350:550]
     eye_image = eye_image_color[:,:,0]
     #eye_image = cv.cvtColor(eye_image_color, cv.COLOR_BGR2GRAY)
 
@@ -40,7 +45,7 @@ while success:
     frame_tensor = tf.expand_dims(frame_tensor, axis=0)
 
     # Predict each frame
-    prediction = new_model.predict(frame_tensor,verbose=0)
+    prediction = new_model(frame_tensor, training=False)
     if prediction[0][0] >= prediction[0][1]:
         #print('Single Image Prediction: Closed Eyes')
         eye_open = False
@@ -48,17 +53,22 @@ while success:
         #print('Single Image Prediction: Open Eyes')
         eye_open = True
 
+    # Apply a median filter (normalization)
+    l = 5
+    kernel = np.ones((l,l),np.float32)/(l**2)
+    #eye_image = cv.filter2D(eye_image,-1,kernel)
+
     # Binarize the image
-    thresh = 175
-    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_TOZERO)
+    thresh = 200
+    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.ADAPTIVE_THRESH_MEAN_C)
 
     # Apply a median filter (normalization)
-    l = 20
+    l = 10
     kernel = np.ones((l,l),np.float32)/(l**2)
     eye_image = cv.filter2D(eye_image,-1,kernel)
 
     # Binarize the image
-    thresh = 50
+    thresh = 55
     ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
 
     # Canny Edge Detection
@@ -67,7 +77,7 @@ while success:
     if eye_open:
 
         # Hough Transform
-        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,1000,param1=450,param2=1,minRadius=5,maxRadius=30)
+        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,1000,param1=450,param2=1,minRadius=5,maxRadius=40)
 
         # Draw circles that are detected.
         if detected_circles is not None:
@@ -97,7 +107,7 @@ while success:
     # Display the resulting frame
     cv.imshow("Detected Circle", eye_image_color)
     cv.waitKey(25)
-    print(count/30/60)
+    #print(count/30/60)
 
     # Get the next frame
     success,image = vidcap.read()
