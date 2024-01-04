@@ -3,120 +3,103 @@
 # Imports
 import cv2 as cv
 import numpy as np
-import pickle
-import sys
+from scipy.io import savemat
 import tensorflow as tf
-from matplotlib import pyplot as plt
+from tqdm import tqdm
+import time
 
-# Collect Directory of video
-for arg in sys.argv:
-    directory = arg
+# Dependencies
+import image_processing as ip
+
+DIR = "video/run1.avi"
+TYPE = 1
 
 # Load the model
 new_model = tf.keras.models.load_model('CNN_model/ES_v1.h5')
 
 # Start capture of the video
-vidcap = cv.VideoCapture(directory)
+vidcap = cv.VideoCapture(DIR)
 success,image = vidcap.read()
-count = 0
-plt.imshow(image)
 
-# Initilize diameter & frame list
+# Get # of frames
+N = int(vidcap.get(cv.CAP_PROP_FRAME_COUNT))-56
+
+# Initilize
 diameter = []
 frames = []
+record = False
 
-while success:
-    # Save frame as JPEG file
-    #cv.imwrite("frame%d.jpg" % count, image)
+print('INITIALIZATION COMPLETE')
+print('_______________________')
 
-    # Determine if a marker frame
-    # Do later
+# Start timer
+start_timer = time.perf_counter()
 
-    # Parse out eye image & convert to grayscale
-    eye_image_color = image[130:350, 350:550]
-    eye_image = eye_image_color[:,:,0]
-    #eye_image = cv.cvtColor(eye_image_color, cv.COLOR_BGR2GRAY)
+# Run analysis
+print('Processing:')
+for count in tqdm(range(N)):
 
-    # Preprocess each frame
-    frame_resized = cv.resize(eye_image_color, (64,64), interpolation=cv.INTER_AREA)
-    #grayFrame = cv.cvtColor(frame_resized, cv.COLOR_BGR2GRAY)
-    new_frame = tf.convert_to_tensor(frame_resized, dtype=tf.float32)
-    frame_tensor = tf.image.convert_image_dtype(new_frame, dtype=tf.float32, saturate=False)
-    frame_tensor = tf.expand_dims(frame_tensor, axis=0)
+    if not record:
+        record = ip.startScan(image, type=TYPE)
 
-    # Predict each frame
-    prediction = new_model(frame_tensor, training=False)
-    if prediction[0][0] >= prediction[0][1]:
-        #print('Single Image Prediction: Closed Eyes')
-        eye_open = False
-    else:
-        #print('Single Image Prediction: Open Eyes')
-        eye_open = True
+    if record:
+        # Parse out eye image & convert to grayscale
+        eye_image_color = ip.parseImage(image, type=TYPE)
+        eye_image = eye_image_color[:,:,0]  # Take the blue channel
 
-    # Apply a median filter (normalization)
-    l = 5
-    kernel = np.ones((l,l),np.float32)/(l**2)
-    #eye_image = cv.filter2D(eye_image,-1,kernel)
+        # Preprocess each frame
+        frame_resized = cv.resize(eye_image_color, (64,64), interpolation=cv.INTER_AREA)
+        new_frame = tf.convert_to_tensor(frame_resized, dtype=tf.float32)
+        frame_tensor = tf.image.convert_image_dtype(new_frame, dtype=tf.float32, saturate=False)
+        frame_tensor = tf.expand_dims(frame_tensor, axis=0)
 
-    # Binarize the image
-    thresh = 200
-    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.ADAPTIVE_THRESH_MEAN_C)
+        # Predict each frame
+        prediction = new_model(frame_tensor, training=False)
+        if prediction[0][0] >= prediction[0][1]:
+            eye_open = False
+        else:
+            eye_open = True
 
-    # Apply a median filter (normalization)
-    l = 10
-    kernel = np.ones((l,l),np.float32)/(l**2)
-    eye_image = cv.filter2D(eye_image,-1,kernel)
+        # Image Processing
+        processed_frame = ip.preprocessImage(eye_image, Gsize=5, threshold=150)
 
-    # Binarize the image
-    thresh = 55
-    ret,eye_image = cv.threshold(eye_image,thresh,255,cv.THRESH_BINARY)
+        if eye_open:
 
-    # Canny Edge Detection
-    #eye_image = cv.Canny(eye_image,10,200)
+            x, y, d = ip.predictCircle(processed_frame)
 
-    if eye_open:
-
-        # Hough Transform
-        detected_circles = cv.HoughCircles(eye_image,cv.HOUGH_GRADIENT,1,1000,param1=450,param2=1,minRadius=5,maxRadius=40)
-
-        # Draw circles that are detected.
-        if detected_circles is not None:
-    
-            # Convert the circle parameters a, b and r to integers.
-            detected_circles = np.uint16(np.around(detected_circles))
-            
-            for pt in detected_circles[0, :]:
-                
-                a, b, r = pt[0], pt[1], pt[2]
-
-                # Append new diameter & frame #
-                diameter.append(r*2)
+            # Append new diameter & frame #
+            if d is not None:
+                diameter.append(d)
                 frames.append(count)
 
-                # Draw the circumference of the circle.
-                cv.circle(eye_image_color, (a, b), r, (0, 255, 0), 2)
-            
-                # Draw a small circle (of radius 1) to show the center.
-                cv.circle(eye_image_color, (a, b), 1, (0, 0, 255), 3)
+            # Draw the circumference of the circle.
+            #cv.circle(eye_image_color, (x, y), r, (255, 255, 0), 2)
+                
+            # Draw a small circle (of radius 1) to show the center.
+            #cv.circle(eye_image_color, (x, y), 1, (255, 0, 255), 3)     
 
-    else:
-
-        diameter.append(0)
-        frames.append(count)
+        else:
+            diameter.append(0)
+            frames.append(count)
 
     # Display the resulting frame
-    cv.imshow("Detected Circle", eye_image_color)
-    cv.waitKey(25)
-    #print(count/30/60)
+    #cv.imwrite("frames/frame%d.jpg" % count, image)
+    #cv.imshow("Detected Circle", eye_image_color)
+    #cv.waitKey(25)
 
     # Get the next frame
     success,image = vidcap.read()
-    #print('Read a new frame: ', success)
-    count += 1
 
 # Save the data
-with open("data/eye_frames", "wb") as fd:
-    pickle.dump(frames, fd)
+vidcap.release()
+print('Alalysis complete: saving data...')
 
-with open("data/eye_diameter", "wb") as dd:
-    pickle.dump(diameter, dd)
+frames = [x - frames[0] for x in frames]
+savemat('analysis/data/frame_count.mat', {'frame_count':frames})
+savemat('analysis/data/diameters.mat', {'diameters':diameter})
+
+print('Data saved.')
+
+finish_timer = time.perf_counter()
+print(f'Finished in {round(finish_timer-start_timer, 2)} second(s)')
+print('DONE')

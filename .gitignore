@@ -1,5 +1,12 @@
-# Virtual Environment Files
+# Folders
 env/
 __pycache__/
 frames/
 video/
+data/
+
+# Files
+/test.py
+
+# File types
+*.asv
