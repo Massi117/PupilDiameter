@@ -11,7 +11,7 @@ import time
 # Dependencies
 import image_processing as ip
 
-DIR = "video/Test1.avi"
+DIR = "/ad/eng/research/eng_research_lewislab/data/emot/mood35sd/eyes/run1.avi"
 
 # Load the model
 new_model = tf.keras.models.load_model('CNN_model/ES_v1.h5')
@@ -88,12 +88,12 @@ for count in tqdm(range(N)):
 
             diameter.append(int(d))
             frames.append(count)
-
+            
             # Draw the circumference of the circle.
-            cv.circle(eye_image_color, (x, y), int(d/2), (255, 255, 0), 2)
+            #cv.circle(eye_image_color, (x, y), int(d/2), (255, 255, 0), 2)
                 
             # Draw a small circle (of radius 1) to show the center.
-            cv.circle(eye_image_color, (x, y), 1, (255, 0, 255), 3)     
+            #cv.circle(eye_image_color, (x, y), 1, (255, 0, 255), 3)     
 
         else:
             diameter.append(0)
@@ -101,8 +101,8 @@ for count in tqdm(range(N)):
 
         # Save & display the resulting frame
         #cv.imwrite("frames/frame%d.jpg" % count, eye_image_color)
-        cv.imshow("Detected Circle", eye_image_color)
-        cv.waitKey(25)
+        #cv.imshow("Detected Circle", eye_image_color)
+        #cv.waitKey(25)
 
     # Get the next frame
     success,image = vidcap.read()
