@@ -2,8 +2,7 @@
 clear;
 
 % Load the data
-load('data\diameters.mat');     % loads variable "diameters"
-load('data\frame_count.mat');   % loads variable "frame_count"
+load('data\data_dict.mat');     % loads variable "diameters" & "frame_count"
 stimonset = load('data\run1_timepoints.mat').stimonset;
 
 % Convert stim onsets to frames
@@ -15,10 +14,10 @@ onsets = int64(onsets*30);
 %% Plot Data
 figure(1);
 hold on;
-plot(frame_count, diameters);
+plot(frames, diameters);
 
 for i = 1:length(onsets)
-    xline(onsets(i));
+    %xline(onsets(i));
 end
 title("Pupil Diameter Changes");
 xlabel('Frame');

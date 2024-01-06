@@ -3,6 +3,17 @@
 # Imports
 import cv2 as cv
 import numpy as np
+import math
+
+def getType(image):
+    '''
+    returns the type of video format
+    '''
+    height, width , channels = image.shape
+    if height < 200:
+        return 2
+    else:
+        return 1
 
 def startScan(image, type):
     '''
@@ -15,11 +26,11 @@ def startScan(image, type):
         else:
             return False
     elif type == 2:
-        pixel = image[0][0]
-        if (pixel == [102, 102, 100]).all():
-            return True
-        else:
+        pixel = image[115][210]
+        if (pixel <= [5, 5, 5]).all():
             return False
+        else:
+            return True
     else:
         raise Exception("parameter 'type' must be a 1 or 2")
 
@@ -32,7 +43,7 @@ def parseImage(image, type=1):
     if type == 1:
         parsed_image = image[130:350, 350:550]
     elif type == 2:
-        parsed_image = image[130:350, 350:550]
+        parsed_image = image[20:115, 5:100]
     else:
         raise Exception("parameter 'type' must be a 1 or 2")
     
@@ -47,17 +58,26 @@ def preprocessImage(image, Gsize, threshold):
     preprocessedImage = cv.filter2D(image,-1,kernel)
 
     # Binarize the image
-    sucess, preprocessedImage = cv.threshold(preprocessedImage,threshold,255,cv.THRESH_BINARY)
+    sucess, preprocessedImage = cv.threshold(preprocessedImage,threshold,255,cv.THRESH_BINARY+cv.THRESH_OTSU)
 
     if not sucess:
         raise Exception("image could not be binarised")
 
     return preprocessedImage
 
-def predictCircle(image):
+def predictCircle(image, type):
     '''
     returns radius and location of detected circle
     '''
+    if type == 1:
+        max = 40
+        min = 5
+    elif type ==2:
+        max = 14
+        min = 5
+    else:
+        raise Exception("parameter 'type' must be a 1 or 2")
+    
     # Apply Hough Transform
     detected_circles = cv.HoughCircles(image,
                                        cv.HOUGH_GRADIENT,
@@ -65,8 +85,8 @@ def predictCircle(image):
                                        1000,
                                        param1=450,
                                        param2=1,
-                                       minRadius=5,
-                                       maxRadius=40)
+                                       minRadius=min,
+                                       maxRadius=max)
 
     # Draw circles that are detected.
     if detected_circles is not None:
@@ -83,3 +103,15 @@ def predictCircle(image):
     else:
         return None, None, None
 
+
+def detectOutlier(x, y, d, centerX, centerY, prevD):
+    '''
+    returns True if the center of the circle is on average
+    far away than previous iterations
+    '''
+    distanceX = abs(x-centerX)
+    distanceY = abs(y-centerY)
+    if distanceX > d or distanceY > d or (abs(d-prevD)>10):
+        return True
+    else:
+        return False
